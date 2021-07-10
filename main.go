@@ -5,10 +5,14 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/danish45007/my-google.com/urlshortner"
+	"github.com/olekukonko/tablewriter"
 )
 
 var googleDomains = map[string]string{
@@ -354,12 +358,30 @@ func searchOnGoogle(searchTerm string, countryCode string, languageCode string, 
 	return results, nil
 }
 
-func main() {
-	res, err := searchOnGoogle("john cena", "com", "en", 1, 100, nil, 5)
+func createTableOnTerminal() {
+	//TODO: create a cli-interface to pass arguments
+	res, err := searchOnGoogle("kpop", "com", "en", 1, 10, nil, 5)
 	if err != nil {
 		fmt.Println(err)
 	}
+	results := [][]string{}
+
 	for _, r := range res {
-		fmt.Println(r)
+		result := []string{}
+		result = append(result, strconv.Itoa(r.ResultRank), r.ResultTitle, r.ResultDesc, urlshortner.UrlShortner(r.ResultUrl))
+		results = append(results, result)
 	}
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Rank", "Title", "Description ", "Url"})
+	table.SetBorder(true)
+	table.SetCaption(true, "Search Results")
+	table.SetRowLine(true)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.AppendBulk(results)
+
+	table.Render()
+}
+
+func main() {
+	createTableOnTerminal()
 }
