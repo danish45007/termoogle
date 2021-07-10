@@ -3,8 +3,12 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 var googleDomains = map[string]string{
@@ -46,12 +50,76 @@ func buildGoogleUrls(searchTerm string, countryCode string, languageCode string,
 	return toScrape, nil
 }
 
-func makeRequestToGoogle(page string, proxy interface{}) {
+func getScrapeClient(proxy interface{}) *http.Client {
+	// if the proxy type is string
+	//return custom http client with proxy enabled
+	switch v := proxy.(type) {
+	case string:
+		proxyUrl, _ := url.Parse(v)
+		return &http.Client{Transport: &http.Transport{
+			Proxy: http.ProxyURL(proxyUrl),
+		}}
+	default:
+		return &http.Client{}
+	}
+}
+
+func makeRequestToGoogle(searchUrl string, proxy interface{}) (*http.Response, error) {
+	baseClient := getScrapeClient(proxy)
+	req, _ := http.NewRequest("GET", searchUrl, nil)
+	req.Header.Set("User-Agent", randomUserAgent())
+
+	res, err := baseClient.Do(req)
+	if res.StatusCode != 200 {
+		err := fmt.Errorf("we recevied a non-200 status code suggesting a ban")
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func googleLinkValidation(url string) bool {
+	if url != "" && url != "#" && !strings.HasPrefix(url, "/") {
+		return true
+	} else {
+		return false
+	}
 
 }
 
-func googleResultParsing(response string, counter int) ([]SerachResults, error) {
-	return []SerachResults,nil
+func googleResultParsing(response *http.Response, rank int) ([]SerachResults, error) {
+	doc, err := goquery.NewDocumentFromResponse(response)
+	if err != nil {
+		return nil, err
+	}
+	results := []SerachResults{}
+	targetTag := doc.Find("div.g")
+	//increment rank
+	rank++
+	for i := range targetTag.Nodes {
+		item := targetTag.Eq(i)
+		linkTag := item.Find("a")
+		link, _ := linkTag.Attr("href")
+		titleTag := item.Find("h3.r")
+		descTag := item.Find("span.st")
+		desc := descTag.Text()
+		title := titleTag.Text()
+		validLink := strings.Trim(link, " ")
+		// data validation
+		if googleLinkValidation(validLink) {
+			result := SerachResults{
+				rank,
+				validLink,
+				title,
+				desc,
+			}
+			results = append(results, result)
+		}
+	}
+	return results, nil
 }
 
 func searchOnGoogle(searchTerm string, countryCode string, languageCode string, pages int, resultCount int, proxy interface{}, backOffTime int) ([]SerachResults, error) {
@@ -71,9 +139,9 @@ func searchOnGoogle(searchTerm string, countryCode string, languageCode string, 
 			return nil, err
 		}
 		resultCounter += len(data)
-		for _, result := range data {
-			results = append(results, result)
-		}
+
+		results = append(results, data...)
+
 		//wait for making next request to google API
 		time.Sleep(time.Duration(backOffTime) * time.Second)
 
@@ -85,7 +153,7 @@ func searchOnGoogle(searchTerm string, countryCode string, languageCode string, 
 func main() {
 	res, err := searchOnGoogle("danish sharma", "com", "en", 1, 30, nil, 5)
 	if err != nil {
-		panic("unable to fetch results.")
+		panic("Unable to fetch results.")
 	}
 	for _, r := range res {
 		fmt.Println(r)
