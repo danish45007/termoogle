@@ -50,6 +50,16 @@ type promptContent struct {
 	label    string
 }
 
+type userInput struct {
+	searchTerm   string
+	countryCode  string
+	languageCode string
+	pages        int
+	resultCount  int
+	proxy        interface{}
+	backOffTime  int
+}
+
 func promptGetInput(pc promptContent) string {
 	validate := func(input string) error {
 		if len(input) <= 0 {
@@ -133,23 +143,13 @@ func promptGetSelect(pc promptContent, items []string) string {
 	return result
 }
 
-func createSearchQuery() {
+func getUserInput() userInput {
+
 	searchTerm := promptContent{
 		"Please provide a search term.",
 		"What word would you like to search about ?",
 	}
-	page := promptContent{
-		"Please provide a page number.",
-		"What page number would you like to see?",
-	}
-	resultCount := promptContent{
-		"Please provide result count.",
-		"How many results would you like to see ?",
-	}
-	proxy := promptContent{
-		"Please provide a proxy",
-		"Would you like pass proxy IP defult it will use your IP address (press enter with empty input) ?",
-	}
+
 	domain := promptContent{
 		"Please provide a domain.",
 		fmt.Sprintf("What domain you want to search %s?", searchTerm),
@@ -158,6 +158,21 @@ func createSearchQuery() {
 	language := promptContent{
 		"Please provide a language.",
 		fmt.Sprintf("What language you want to search %s in?", searchTerm),
+	}
+
+	page := promptContent{
+		"Please provide a page number.",
+		"What page number would you like to see?",
+	}
+
+	resultCount := promptContent{
+		"Please provide result count.",
+		"How many results would you like to see ?",
+	}
+
+	proxy := promptContent{
+		"Please provide a proxy",
+		"Would you like pass proxy IP defult it will use your IP address (press enter with empty input) ?",
 	}
 
 	enteredSearchTerm := promptGetInput(searchTerm)
@@ -175,6 +190,20 @@ func createSearchQuery() {
 	languageCode, _ := languages.GetGoogleLanguageCode(enteredLanguage)
 	intPage, _ := strconv.Atoi(enteredPage)
 	intResultCount, _ := strconv.Atoi(enteredResultCount)
-	searchengine.SearchEngine(enteredSearchTerm, enteredDomain, languageCode, intPage, intResultCount, Proxy, 5)
+
+	return userInput{
+		enteredSearchTerm,
+		enteredDomain,
+		languageCode,
+		intPage,
+		intResultCount,
+		Proxy,
+		5, //static value
+	}
+}
+
+func createSearchQuery() {
+	inputValues := getUserInput()
+	searchengine.SearchEngine(inputValues.searchTerm, inputValues.countryCode, inputValues.languageCode, inputValues.pages, inputValues.resultCount, inputValues.proxy, inputValues.backOffTime)
 
 }
