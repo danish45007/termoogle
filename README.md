@@ -1,1 +1,1 @@
-# Termoogle -- google.com @ your terminal 😍
+# Termoogle -- google.com @ your terminal ;}
