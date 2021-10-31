@@ -12,7 +12,7 @@ RUN go mod download
 
 COPY . .
 
-ENV API_KEY_KUTT $API_KEY_KUTT
+ENV API_KEY_KUTT "$API_KEY_KUTT"
 
 RUN go build
 
